@@ -1,0 +1,14 @@
+vmname="vm_name"
+USER=`who | grep console | awk '{print $1}'`
+
+result=$(sudo -u $USER prlctl list "$vmname" -i | grep -i Edit | awk '{print $3}')
+
+if [ "$result" == "yes" ]; then
+result="Restricted Editing Enabled"
+elif [ "$result" == "no" ]; then
+result="Restricted Editing Disabled"
+else
+result="Restricted Editing Unknown"
+fi
+
+echo "<result>$result</result>"
