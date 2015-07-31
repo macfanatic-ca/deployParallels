@@ -9,11 +9,8 @@ vmuser="user"
 USER=`who | grep console | awk '{print $1}'`
 
 # Generate Random Password
-openssl rand -base64 6 > /tmp/userpass.txt
-vmuserpass=$(cat /tmp/userpass.txt)
+openssl rand -base64 6 > ~/Desktop/$vmname\ User\ Password.txt
+vmuserpass=$(cat ~/Desktop/$vmname\ User\ Password.txt)
 
 # Change Password for vmuser
-sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl set "$vmname" --userpasswd $vmuser:$vmuserpass
-
-# Reveal Password
-mv /tmp/userpass.txt /Users/$USER/Desktop/$vmname\ User\ Password.txt
+/Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl set "$vmname" --userpasswd $vmuser:$vmuserpass
