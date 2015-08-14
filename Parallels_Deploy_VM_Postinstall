@@ -1,0 +1,58 @@
+#!/bin/sh
+
+# Find out who's logged in
+USER=`who | grep console | awk '{print $1}'`
+# New VM Name
+newVM="IT VM 2.0"
+# Old VM String
+oldVM="IT VM"
+# Target VM Directory
+vmDir="/Users/$USER/Documents/Parallels/IT/"
+# Determine working directory
+installDir=`dirname $0`
+
+# Copy new VM to destination
+echo "Deploying $newVM..."
+cp -R $installDir/"$newVM.pvm" $vmDir
+if [[ $? != 0 ]]; then
+        echo "ERROR: Failed to deploy $newVM"
+        exit 1
+else
+        echo "Deployment of $newVM Sucessful"
+fi
+# Repair permisssions
+echo "Repairing permisssions on $newVM..."
+chown -R $USER $vmDir"$newVM.pvm"
+chown $USER $vmDir
+chmod -R 711 $vmDir"$newVM.pvm"
+# Register new VM
+echo "Registering $newVM..."
+sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl register ~/Documents/Parallels/IT/"$newVM.pvm"
+# Reset MAC address
+echo "Resetting MAC Address of $newVM..."
+sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl set "$newVM" --device-set "net0" --mac "auto"
+# Find and Destroy old VM
+echo "Looking for old VM"
+oldVMName="$(sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl list -i | grep -i "Name: $oldVM" | grep -v "$newVM" | awk '{print $2,$3,$4}')"
+if [[ -n $oldVMName ]]; then
+        echo "Found old VM $oldVMName"
+        # Check is old VM is running
+        oldVMStatus="$(sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl status "$oldVMName" | awk '{print $6}')"
+        if [ "$oldVMStatus" != "stopped" ]; then
+                # Stop old VM
+                echo "Stopping $oldVMName"
+                sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl stop "$oldVMName" --kill
+        else
+                echo "$oldVMName already stopped"
+        fi
+        # Deregister old VM
+        echo "Deregistering $oldVMName..."
+        sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl unregister "$oldVMName"
+        # Remove old VM
+        echo "Removing $oldVMName..."
+        rm -r $vmDir"$oldVMName.pvm"
+else
+        echo "No old VM found"
+fi
+
+exit 0
