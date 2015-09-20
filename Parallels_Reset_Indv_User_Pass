@@ -1,0 +1,44 @@
+########################## Variables ##########################
+# Name of VM looking to effect
+vmname="VM Name Here"
+# Logo for Prompt window
+LOGO_ICNS="Path:to:ICNS"
+
+######################### Do Not Edit #########################
+# Find out who's logged in
+USER=`who | grep console | awk '{print $1}'`
+
+# Prompt for new password
+while true; do
+    NEWPASSWORD="$(osascript -e 'Tell application "System Events" to display dialog "Please enter the password you'd like to use for $vmname.\n\nRemember that your password must:\n\t• be at least 8 characters long\n\t• contain at least one capital letter\n\t• contain at least one number or symbol" with hidden answer default answer "" with icon file "'"${LOGO_ICNS//\"/\\\"}"'"' -e 'text returned of result' 2>/dev/null)"
+    if [ $? -ne 0 ]; then
+        exit 0
+    elif [ -z "$NEWPASSWORD" ]; then
+        osascript -e 'Tell application "System Events" to display alert "Password can not be left blank." as warning'
+    elif [ ${#NEWPASSWORD} -lt 8 ]; then
+        osascript -e 'Tell application "System Events" to display alert "New password is not long enough." as warning'
+    elif [[ ! "$NEWPASSWORD" =~ [A-Z] ]]; then
+        osascript -e 'Tell application "System Events" to display alert "New password does not contain any capital letters." as warning'
+    elif [[ ! "$NEWPASSWORD" =~ [!-@] ]]; then
+        osascript -e 'Tell application "System Events" to display alert "New password does not contain any numbers or symbols." as warning'
+    else break
+    fi
+done
+
+# Confirm password
+while true; do
+    CONFIRMPASSWORD="$(osascript -e 'tell application "System Events" to display dialog "Please confirm the new password." with hidden answer default answer "" with icon file "'"${LOGO_ICNS//\"/\\\"}"'"' -e 'text returned of result' 2>/dev/null)"
+    if [ $? -ne 0 ]; then
+        exit 0
+    elif [ -z "$CONFIRMPASSWORD" ]; then
+        osascript -e 'tell application "System Events" to display alert "Password can not be left blank." as warning'
+    elif [ "$CONFIRMPASSWORD" != "$NEWPASSWORD" ]; then
+        osascript -e 'tell application "System Events" to display alert "Passwords do not match." as warning'
+    else break
+    fi
+done
+
+# Reset password for user
+sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl set "$vmname" --userpasswd $USER:$NEWPASSWORD
+# Remove old keyring
+sudo -u $USER /Applications/Parallels\ Desktop.app/Contents/MacOS/prlctl exec "$vmname" "rm -r /home/$USER/.local/share/keyrings/login.keyring"
